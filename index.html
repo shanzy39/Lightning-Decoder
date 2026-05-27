@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lightning Decoder — Inspect LNURL, Lightning Addresses, and BOLT11 Invoices</title>
+  <meta name="description" content="Free, client-side decoder for Lightning Network strings. Decode LNURL, Lightning Addresses, and BOLT11 invoices. No tracking, all processing in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #161b22;
+      --panel-2: #1f2630;
+      --border: #2d333b;
+      --text: #e6edf3;
+      --muted: #9aa4ad;
+      --accent: #f7931a; /* Bitcoin orange */
+      --accent-2: #facc15; /* Lightning yellow */
+      --ok: #3fb950;
+      --err: #f85149;
+      --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    main {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 32px 20px 80px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    header .logo {
+      font-size: 32px;
+      line-height: 1;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin: 4px 0 24px;
+      font-size: 14px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .panel + .panel { margin-top: 16px; }
+    label.field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 96px;
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    button {
+      background: var(--accent);
+      color: #0e1116;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .samples { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .samples a {
+      color: var(--accent-2);
+      text-decoration: none;
+      margin-right: 12px;
+      cursor: pointer;
+    }
+    .samples a:hover { text-decoration: underline; }
+
+    .result-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 20px 0; }
+    .badge {
+      display: inline-block;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+    .badge.ok { border-color: var(--ok); color: var(--ok); }
+    .badge.err { border-color: var(--err); color: var(--err); }
+
+    dl.kv {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 8px 16px;
+      margin: 16px 0 0;
+    }
+    dl.kv dt {
+      color: var(--muted);
+      font-size: 13px;
+      padding-top: 2px;
+    }
+    dl.kv dd {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 13px;
+      word-break: break-all;
+    }
+    dd.url a { color: var(--accent-2); }
+    .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .error {
+      color: var(--err);
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    pre.json {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      overflow: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      margin: 12px 0 0;
+      max-height: 360px;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 40px;
+    }
+    footer a { color: var(--accent-2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      dl.kv { grid-template-columns: 1fr; }
+      dl.kv dt { margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <span class="logo">⚡</span>
+      <h1>Lightning Decoder</h1>
+    </header>
+    <p class="subtitle">
+      Paste any Lightning string — <strong>LNURL</strong>, <strong>Lightning Address</strong>, or <strong>BOLT11 invoice</strong> — and see what's inside. Everything decodes in your browser. Nothing is sent anywhere unless you opt in.
+    </p>
+
+    <section class="panel">
+      <label class="field-label" for="input">Input</label>
+      <textarea id="input" placeholder="LNURL1..., name@domain.com, or lnbc..." spellcheck="false" autocomplete="off"></textarea>
+      <div class="row">
+        <button id="decode-btn">Decode</button>
+        <button id="paste-btn" class="secondary" type="button">Paste from clipboard</button>
+        <button id="clear-btn" class="secondary" type="button">Clear</button>
+      </div>
+      <div class="samples">
+        Try a sample:
+        <a data-sample="lnurl">LNURL</a>
+        <a data-sample="lnaddr">Lightning Address</a>
+        <a data-sample="bolt11">BOLT11 invoice</a>
+      </div>
+    </section>
+
+    <section class="panel" id="result">
+      <div class="result-empty">Decoded output will appear here.</div>
+    </section>
+
+    <footer>
+      Open source — view on
+      <a id="repo-link" href="https://github.com/shanzy39/lightning-decoder" target="_blank" rel="noopener">GitHub</a>
+      · MIT License · Client-side only
+    </footer>
+  </main>
+
+  <script type="module">
+    // ---- bech32 decoder (BIP-173, used by LNURL) ----
+    const CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+    function bech32Decode(str) {
+      if (str.length < 8) throw new Error("String too short");
+      const lower = str.toLowerCase();
+      const sep = lower.lastIndexOf("1");
+      if (sep < 1) throw new Error("No HRP separator found");
+      const hrp = lower.slice(0, sep);
+      const dataPart = lower.slice(sep + 1);
+      const data = [];
+      for (const c of dataPart) {
+        const i = CHARSET.indexOf(c);
+        if (i === -1) throw new Error("Invalid character: " + c);
+        data.push(i);
+      }
+      // We do not strictly verify checksum here; LNURL decoders are typically lax.
+      const values = data.slice(0, data.length - 6);
+      const bytes = convertBits(values, 5, 8, false);
+      return { hrp, bytes };
+    }
+    function convertBits(data, fromBits, toBits, pad) {
+      let acc = 0, bits = 0;
+      const ret = [];
+      const maxv = (1 << toBits) - 1;
+      for (const v of data) {
+        if (v < 0 || (v >> fromBits) !== 0) throw new Error("Invalid value");
+        acc = (acc << fromBits) | v;
+        bits += fromBits;
+        while (bits >= toBits) {
+          bits -= toBits;
+          ret.push((acc >> bits) & maxv);
+        }
+      }
+      if (pad) {
+        if (bits > 0) ret.push((acc << (toBits - bits)) & maxv);
+      } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+        // tolerate trailing bits
+      }
+      return ret;
+    }
+    function bytesToUtf8(bytes) {
+      return new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(bytes));
+    }
+    function bytesToHex(bytes) {
+      return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    // ---- format detection ----
+    function detectFormat(raw) {
+      if (!raw) return "empty";
+      let s = raw.trim().replace(/^lightning:/i, "");
+      // Strip lnurl:// prefix if present
+      s = s.replace(/^lnurl:\/\//i, "");
+      const lower = s.toLowerCase();
+      if (/^lnurl1[ac-hj-np-z02-9]+$/i.test(s)) return "lnurl";
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) return "lnaddr";
+      if (/^lnbc[a-z0-9]+$/i.test(lower) || /^lntb[a-z0-9]+$/i.test(lower) || /^lnbcrt[a-z0-9]+$/i.test(lower)) return "bolt11";
+      return "unknown";
+    }
+
+    // ---- LNURL decode ----
+    function decodeLnurl(s) {
+      const clean = s.trim().replace(/^lightning:/i, "").replace(/^lnurl:\/\//i, "");
+      const { hrp, bytes } = bech32Decode(clean);
+      if (hrp !== "lnurl") throw new Error("Not an LNURL (hrp=" + hrp + ")");
+      const url = bytesToUtf8(bytes);
+      let parsed = null;
+      try { parsed = new URL(url); } catch (_) {}
+      let action = "unknown";
+      if (parsed) {
+        const p = parsed.pathname.toLowerCase();
+        const q = parsed.search.toLowerCase();
+        if (p.includes("/lnurlp/") || q.includes("tag=paytohash") || q.includes("tag=paytohash")) action = "lnurl-pay";
+        else if (q.includes("tag=withdrawrequest") || p.includes("/withdraw")) action = "lnurl-withdraw";
+        else if (q.includes("tag=login")) action = "lnurl-auth";
+        else if (q.includes("tag=channelrequest")) action = "lnurl-channel";
+      }
+      return { type: "LNURL", url, host: parsed ? parsed.host : "(invalid URL)", action };
+    }
+
+    // ---- Lightning Address decode ----
+    function decodeLightningAddress(s) {
+      const clean = s.trim();
+      const [user, domain] = clean.split("@");
+      if (!user || !domain) throw new Error("Invalid Lightning Address");
+      const wellKnown = `https://${domain}/.well-known/lnurlp/${encodeURIComponent(user)}`;
+      return { type: "Lightning Address", user, domain, wellKnown };
+    }
+
+    // ---- BOLT11 decoder via CDN ESM ----
+    // We use light-bolt11-decoder via esm.sh — small, well-known library.
+    let bolt11Lib = null;
+    async function loadBolt11Lib() {
+      if (bolt11Lib) return bolt11Lib;
+      bolt11Lib = await import("https://esm.sh/light-bolt11-decoder@3.2.0");
+      return bolt11Lib;
+    }
+    async function decodeBolt11(s) {
+      const lib = await loadBolt11Lib();
+      const clean = s.trim().replace(/^lightning:/i, "");
+      const decoded = lib.decode(clean);
+      // Pull out high-value fields for the summary
+      const summary = { type: "BOLT11", network: decoded.network && decoded.network.bech32 ? decoded.network.bech32 : "unknown" };
+      const sections = decoded.sections || [];
+      for (const sec of sections) {
+        if (sec.name === "amount") summary.amountMsat = sec.value;
+        if (sec.name === "timestamp") summary.timestamp = sec.value;
+        if (sec.name === "description") summary.description = sec.value;
+        if (sec.name === "description_hash") summary.descriptionHash = sec.value;
+        if (sec.name === "payment_hash") summary.paymentHash = sec.value;
+        if (sec.name === "payee") summary.payee = sec.value;
+        if (sec.name === "expiry") summary.expirySec = sec.value;
+      }
+      summary.raw = decoded;
+      return summary;
+    }
+
+    // ---- UI ----
+    const $ = sel => document.querySelector(sel);
+    const input = $("#input");
+    const result = $("#result");
+
+    async function fetchLnurlPayInfo(url) {
+      try {
+        const res = await fetch(url, { mode: "cors" });
+        if (!res.ok) return { error: "HTTP " + res.status };
+        return await res.json();
+      } catch (e) {
+        return { error: e.message || String(e) };
+      }
+    }
+
+    function renderError(msg) {
+      result.innerHTML = `<span class="badge err">Error</span><div class="error">${escapeHtml(msg)}</div>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    function kvRow(k, v, opts = {}) {
+      const cls = opts.url ? "url" : "";
+      const valHtml = opts.url
+        ? `<a href="${escapeHtml(v)}" target="_blank" rel="noopener">${escapeHtml(v)}</a>`
+        : escapeHtml(v);
+      return `<dt>${escapeHtml(k)}</dt><dd class="${cls}">${valHtml}</dd>`;
+    }
+
+    function copyButton(text, label = "Copy") {
+      return `<button class="secondary" data-copy="${escapeHtml(text)}">${escapeHtml(label)}</button>`;
+    }
+
+    function formatTimestamp(ts) {
+      try {
+        return new Date(ts * 1000).toISOString().replace("T", " ").replace(/\..*/, " UTC");
+      } catch (_) { return String(ts); }
+    }
+
+    function formatSats(msat) {
+      if (msat === undefined || msat === null || msat === "") return "(any amount)";
+      const sats = Math.round(Number(msat) / 1000);
+      return sats.toLocaleString("en-US") + " sats (" + Number(msat).toLocaleString("en-US") + " msat)";
+    }
+
+    async function renderLnurl(obj) {
+      let html = `<span class="badge ok">LNURL</span>`;
+      html += `<dl class="kv">`;
+      html += kvRow("Decoded URL", obj.url, { url: true });
+      html += kvRow("Host", obj.host);
+      html += kvRow("Action", obj.action);
+      html += `</dl>`;
+      html += `<div class="actions">${copyButton(obj.url, "Copy URL")}<button class="secondary" id="fetch-lnurl">Fetch endpoint</button></div>`;
+      html += `<div id="endpoint-result"></div>`;
+      result.innerHTML = html;
+      attachCopyHandlers();
+      $("#fetch-lnurl").onclick = async () => {
+        $("#endpoint-result").innerHTML = `<p style="color:var(--muted)">Fetching…</p>`;
+        const data = await fetchLnurlPayInfo(obj.url);
+        $("#endpoint-result").innerHTML = `<pre class="json">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+      };
+    }
+
+    function renderLnaddr(obj) {
+      let html = `<span class="badge ok">Lightning Address</span>`;
+      html += `<dl class="kv">`;
+      html += kvRow("User", obj.user);
+      html += kvRow("Domain", obj.domain);
+      html += kvRow("Resolves to", obj.wellKnown, { url: true });
+      html += `</dl>`;
+      html += `<div class="actions">${copyButton(obj.wellKnown, "Copy URL")}<button class="secondary" id="fetch-lnaddr">Fetch endpoint</button></div>`;
+      html += `<div id="endpoint-result"></div>`;
+      result.innerHTML = html;
+      attachCopyHandlers();
+      $("#fetch-lnaddr").onclick = async () => {
+        $("#endpoint-result").innerHTML = `<p style="color:var(--muted)">Fetching…</p>`;
+        const data = await fetchLnurlPayInfo(obj.wellKnown);
+        $("#endpoint-result").innerHTML = `<pre class="json">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+      };
+    }
+
+    function renderBolt11(obj) {
+      const expires = obj.timestamp && obj.expirySec
+        ? formatTimestamp(obj.timestamp + obj.expirySec)
+        : "(default 3600s after timestamp)";
+      const created = obj.timestamp ? formatTimestamp(obj.timestamp) : "—";
+      let html = `<span class="badge ok">BOLT11 Invoice</span>`;
+      html += `<dl class="kv">`;
+      html += kvRow("Network", obj.network);
+      html += kvRow("Amount", formatSats(obj.amountMsat));
+      html += kvRow("Description", obj.description || obj.descriptionHash || "(none)");
+      html += kvRow("Created", created);
+      html += kvRow("Expires", expires);
+      if (obj.payee) html += kvRow("Payee (pubkey)", obj.payee);
+      if (obj.paymentHash) html += kvRow("Payment hash", obj.paymentHash);
+      html += `</dl>`;
+      html += `<details style="margin-top:12px"><summary style="cursor:pointer;color:var(--muted)">Show full decoded JSON</summary><pre class="json">${escapeHtml(JSON.stringify(obj.raw, null, 2))}</pre></details>`;
+      result.innerHTML = html;
+    }
+
+    function attachCopyHandlers() {
+      result.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(btn.dataset.copy);
+            const orig = btn.textContent;
+            btn.textContent = "Copied ✓";
+            setTimeout(() => btn.textContent = orig, 1200);
+          } catch (_) {}
+        };
+      });
+    }
+
+    async function decodeAndRender() {
+      const raw = input.value.trim();
+      if (!raw) {
+        result.innerHTML = `<div class="result-empty">Decoded output will appear here.</div>`;
+        return;
+      }
+      const fmt = detectFormat(raw);
+      try {
+        if (fmt === "lnurl") renderLnurl(decodeLnurl(raw));
+        else if (fmt === "lnaddr") renderLnaddr(decodeLightningAddress(raw));
+        else if (fmt === "bolt11") {
+          result.innerHTML = `<p style="color:var(--muted)">Decoding BOLT11…</p>`;
+          renderBolt11(await decodeBolt11(raw));
+        }
+        else renderError("Unrecognized format. Expected LNURL, Lightning Address, or BOLT11 invoice.");
+      } catch (e) {
+        renderError(e.message || String(e));
+      }
+    }
+
+    // Samples for the "Try a sample" links
+    const SAMPLES = {
+      lnurl: "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS",
+      lnaddr: "satoshi@walletofsatoshi.com",
+      bolt11: "lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpuaztrnwngzn3kdzw5hydlzf03qdgm2hdq27cqv3agm2awhz5se903vruatfhq77w3ls4evs3ch9zw97j25emudupq63nyw24cg27h2rspfj9srp"
+    };
+
+    // ---- Event wiring ----
+    $("#decode-btn").onclick = decodeAndRender;
+    input.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") decodeAndRender();
+    });
+    $("#clear-btn").onclick = () => { input.value = ""; result.innerHTML = `<div class="result-empty">Decoded output will appear here.</div>`; input.focus(); };
+    $("#paste-btn").onclick = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        input.value = text;
+        decodeAndRender();
+      } catch (_) {
+        alert("Clipboard read failed. Paste manually with ⌘V / Ctrl+V.");
+      }
+    };
+    document.querySelectorAll("[data-sample]").forEach(a => {
+      a.onclick = () => { input.value = SAMPLES[a.dataset.sample]; decodeAndRender(); };
+    });
+  </script>
+</body>
+</html>
