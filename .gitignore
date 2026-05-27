@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs / temp files
+*.log
+*.tmp
+.cache/
+
+# Local dev servers (Python http.server etc. don't create these, but just in case)
+__pycache__/
+*.pyc
+
+# Node — not used here but in case you add tooling later
+node_modules/
+package-lock.json
+yarn.lock

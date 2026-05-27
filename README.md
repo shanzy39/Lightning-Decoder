@@ -2,7 +2,7 @@
 
 A free, client-side web tool to inspect Lightning Network strings. Paste an **LNURL**, **Lightning Address**, or **BOLT11 invoice** and see what's inside — without sending your data to any server.
 
-> Live demo: https://shanzy39.github.io/lightning-decoder
+> Live demo: https://shanzy39.github.io/Lightning-Decoder/
 
 ## Features
 
@@ -61,7 +61,7 @@ python3 -m http.server 8000
 1. Push this repo to GitHub
 2. Go to **Settings → Pages**
 3. Set **Source** to `Deploy from a branch`, branch `main`, folder `/ (root)`
-4. Save. Your site will be live at `https://<your-username>.github.io/lightning-decoder/`
+4. Save. Your site will be live at `https://<your-username>.github.io/Lightning-Decoder/`
 
 ## Built with
 
